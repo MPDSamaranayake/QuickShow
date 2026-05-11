@@ -26,21 +26,21 @@ const Navbar = () => {
 
         <XIcon className='md:hidden absolute top-6 right-6 w-6 h-6 cursor-pointer' onClick={() => setIsOpen(false)} />
 
-            <Link onClick={() => {scrollTo(0, 0), setIsOpen(false)}} to='/'>Home</Link>
-            <Link onClick={() => {scrollTo(0, 0), setIsOpen(false)}} to='/movies'>Movies</Link>
-            <Link onClick={() => {scrollTo(0, 0), setIsOpen(false)}} to='/theaters'>Theaters</Link>
-            <Link onClick={() => {scrollTo(0, 0), setIsOpen(false)}} to='/releases'>Releases</Link>
-            <Link onClick={() => {scrollTo(0, 0), setIsOpen(false)}} to='/favourites'>Favourites</Link>
+            <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/'>Home</Link>
+            <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/movies'>Movies</Link>
+            <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/theaters'>Theaters</Link>
+            <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/releases'>Releases</Link>
+            <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/favourites'>Favourites</Link>
             
             </div>
 
         {/* Desktop oval menu */}
         <div className="hidden md:flex md:flex-1 md:justify-center">
           <div className="bg-gray-700/70 rounded-full px-6 py-3 border border-gray-700 flex items-center gap-8">
-            <Link onClick={() => {scrollTo(0, 0), setIsOpen(false)}} to='/'>Home</Link>
-            <Link onClick={() => {scrollTo(0, 0), setIsOpen(false)}} to='/movies'>Movies</Link>
-            <Link onClick={() => {scrollTo(0, 0), setIsOpen(false)}} to='/theaters'>Theaters</Link>
-            <Link onClick={() => {scrollTo(0, 0), setIsOpen(false)}} to='/releases'>Releases</Link>
+            <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/'>Home</Link>
+            <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/movies'>Movies</Link>
+            <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/theaters'>Theaters</Link>
+            <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/releases'>Releases</Link>
             <Link onClick={() => {scrollTo(0, 0), setIsOpen(false)}} to='/favourites'>Favourites</Link>
           </div>
         </div>

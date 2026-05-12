@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react"
-import { dummyShowsData } from "../assets/assets";
+import { dummyDateTimeData, dummyShowsData } from "../assets/assets";
 import { useParams } from "react-router-dom";
 import BlurCircle from "../components/BlurCircle";
+import DateSelect from "../components/DateSelect";
 import { HeartIcon, PlayCircleIcon, StarIcon } from "lucide-react";
 import timeFormat from "../lib/timeFormat";
 
@@ -13,7 +14,7 @@ const MovieDetails = () => {
     const found = dummyShowsData.find((s) => s._id === id);
     setShow({
       movie: found,
-      dateTime: null
+      dateTime: dummyDateTimeData
     })
   }
   useEffect(() => {
@@ -70,6 +71,7 @@ const MovieDetails = () => {
           ))}
         </div>
       </div>
+      <DateSelect dateTime={show.dateTime} id={id} />
     </div>
   ) : <div>Loading...</div>
 };

@@ -45,7 +45,7 @@ const MovieDetails = () => {
               <PlayCircleIcon className={'w-5 h-5'} />
               Watch Trailer
             </button>
-            <a href="" className="px-10 py-3 text-smbg-primary
+            <a href="#dateSelect" className="px-10 py-3 text-smbg-primary
             hover:bg-primary-dull transition rounded-md font-medium cursor-pointer
             active:scale-95">Buy Tickets</a>
             <button className="bg-gray-700 p-2.5 rounded-full transition
@@ -58,6 +58,17 @@ const MovieDetails = () => {
         </div>
 
 
+      </div>
+      <p className="text-lgfont-medium mt-20">Your Favourite Cast</p>
+      <div className="overflow-x-auto no-scrollbar mt-8 pb-4">
+        <div className="flex items-start gap-4 w-max px-4">
+          {show.movie.casts.slice(0,12).map((cast,index) => (
+            <div key={index} className="flex w-20 shrink-0 flex-col items-center text-center">
+              <img src={cast.profile_path} alt="" className="rounded-full h-20 md:h-20 aspect-square object-cover" />
+              <p className="font-medium text-xs mt-3">{cast.name}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   ) : <div>Loading...</div>

@@ -16,3 +16,7 @@ body{
   color: white;
   background-color: #1e1e1e;
 }
+
+.no-scrollbar{
+  scrollbar-width: none;
+}

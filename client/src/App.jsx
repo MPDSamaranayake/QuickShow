@@ -33,6 +33,7 @@ const App = () => {
         <Route path="/favourite" element={<Favourite />} />
         <Route path="/admin/*" element={<Layout />} >
           <Route index element={<Dashboard />} />
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="add-shows" element={<AddShows />} />
           <Route path="list-shows" element={<ListShows />} />
           <Route path="list-bookings" element={<ListBookings />} />

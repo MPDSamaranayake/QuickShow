@@ -1,0 +1,13 @@
+// @ts-nocheck
+/**
+ * Convert large numbers to 'k' format (e.g., 1500 -> 1.5k)
+ * @param {number|string} num
+ * @returns {string|number}
+ */
+export const kConverter = (num) => {
+    const n = typeof num === 'number' ? num : Number(num) || 0;
+    if (n >= 1000) {
+        return `${(n / 1000).toFixed(1)}k`;
+    }
+    return n;
+};

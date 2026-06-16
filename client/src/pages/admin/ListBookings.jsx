@@ -1,18 +1,26 @@
-import React, { useEffect, useState }from 'react'
-import { dummyBookingData } from '../../assets/assets';
+import React, { useEffect, useState } from 'react'
 import Loading from '../../components/Loading';
 import Title from '../../components/admin/Title';
 import { dateFormat } from '../../lib/dateFormat';
+import useApi from '../../hooks/useApi';
 
 const ListBookings = () => {
     const currency = import.meta.env.VITE_CURRENCY_SYMBOL || '$'
+    const { request } = useApi();
 
-    const [bookings, setBookings] = React.useState([]);
-    const [isLoading, setIsLoading] = React.useState(true);
+    const [bookings, setBookings] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     const getALLBookings = async () => {
-        setBookings(dummyBookingData)
-        setIsLoading(false);
+        try {
+            setIsLoading(true);
+            const data = await request('/api/admin/bookings');
+            setBookings(data);
+        } catch (error) {
+            console.error("Failed to fetch admin bookings:", error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     useEffect(() => {

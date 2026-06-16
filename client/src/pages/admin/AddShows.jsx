@@ -1,20 +1,27 @@
 import React, { useEffect, useState} from 'react'
-import { dummyShowsData } from '../../assets/assets';
 import Loading from '../../components/Loading';
 import Title from '../../components/admin/Title';
 import { CheckIcon, StarIcon, Calendar, DeleteIcon } from 'lucide-react';
 import { kConverter } from '../../lib/kConverter';
+import useApi from '../../hooks/useApi';
+import toast from 'react-hot-toast';
 
 const AddShows = () => {
     const currency = import.meta.env.REACT_APP_CURRENCY_SYMBOL || '$'
-    const [nowwPlayingMovies, setNowPlayingMovies] = React.useState([]);
-    const [selectedMovie, setSelectedMovie] = React.useState(null);
-    const [dateTimeSelection, setDateTimeSelection] = React.useState({});
-    const [dateTimeInput, setDateTimeInput] = React.useState('');
-    const [showPrice, setShowPrice] = React.useState('');
+    const { request } = useApi();
+    const [nowwPlayingMovies, setNowPlayingMovies] = useState([]);
+    const [selectedMovie, setSelectedMovie] = useState(null);
+    const [dateTimeSelection, setDateTimeSelection] = useState({});
+    const [dateTimeInput, setDateTimeInput] = useState('');
+    const [showPrice, setShowPrice] = useState('');
     
     const fetchNowPlayingMovies = async () => {
-        setNowPlayingMovies(dummyShowsData) 
+        try {
+            const data = await request('/api/movies');
+            setNowPlayingMovies(data);
+        } catch (error) {
+            console.error("Failed to fetch movies for shows selection:", error);
+        }
     };
 
     const handleDateTimeAdd = () => {
@@ -31,7 +38,7 @@ const AddShows = () => {
         });
     };
 
-    const handleRemoveTime =(date, time) => {
+    const handleRemoveTime = (date, time) => {
         setDateTimeSelection((prev) => {
             const filteredTimes = prev[date].filter((t) => t !== time);
             if (filteredTimes.length === 0) {
@@ -45,7 +52,49 @@ const AddShows = () => {
         });
     };
 
-    React.useEffect(() => {
+    const handleAddShowSubmit = async () => {
+        if (!selectedMovie) {
+            return toast.error("Please select a movie.");
+        }
+        if (!showPrice || Number(showPrice) <= 0) {
+            return toast.error("Please enter a valid show price.");
+        }
+        if (Object.keys(dateTimeSelection).length === 0) {
+            return toast.error("Please select at least one show date and time.");
+        }
+
+        try {
+            const showsToCreate = [];
+            Object.entries(dateTimeSelection).forEach(([date, times]) => {
+                times.forEach((time) => {
+                    const [hour, minute] = time.split(':').map(Number);
+                    const [year, month, day] = date.split('-').map(Number);
+                    // Generate Date in local time context
+                    const showDateTime = new Date(year, month - 1, day, hour, minute);
+
+                    showsToCreate.push({
+                        movie: selectedMovie,
+                        showDateTime,
+                        showPrice: Number(showPrice)
+                    });
+                });
+            });
+
+            await request('/api/shows', {
+                method: 'POST',
+                body: JSON.stringify({ shows: showsToCreate })
+            });
+
+            toast.success("Shows added successfully!");
+            setSelectedMovie(null);
+            setShowPrice('');
+            setDateTimeSelection({});
+        } catch (error) {
+            toast.error(error.message || "Failed to add shows.");
+        }
+    };
+
+    useEffect(() => {
         fetchNowPlayingMovies();
     }, []);
     return nowwPlayingMovies.length > 0 ? (
@@ -56,9 +105,9 @@ const AddShows = () => {
                 <div className='group flex flex-wrap gap-4 mt-4 w-max'>
                     {nowwPlayingMovies.map((movie) => (
                         <div
-                            key={movie.id}
+                            key={movie._id}
                             className='relative max-w-40 cursor-pointer group-hover:not-hover:opacity-40 hover:-translate-y-1 transition duration-300'
-                            onClick={() => setSelectedMovie(movie.id)}
+                            onClick={() => setSelectedMovie(movie._id)}
                         >
                             <div className='relative rounded-lg overflow-hidden'>
                                 <img src={movie.poster_path} alt="" className='w-full object-cover brightness-90' />
@@ -72,7 +121,7 @@ const AddShows = () => {
                                     </p>
                                 </div>
                             </div>
-                            {selectedMovie === movie.id && (
+                            {selectedMovie === movie._id && (
                                 <div className='absolute top-2 right-2 flex items-center justify-center bg-primary h-6 w-6 rounded'>
                                     <CheckIcon className='w-4 h-4 text-white' strokeWidth={2.5} />
                                 </div>
@@ -140,9 +189,11 @@ const AddShows = () => {
                     </ul>
                 </div>
             )}
-            <button className='bg-primary text-white px-8 py-2 mt-6 rounded
-            hover:bg-primary/90 transition-all cursor=pointer'>
-            Add Show
+            <button 
+                onClick={handleAddShowSubmit}
+                className='bg-primary text-white px-8 py-2 mt-6 rounded hover:bg-primary/90 transition-all cursor=pointer'
+            >
+                Add Show
             </button>
         </>
     ) : (

@@ -5,15 +5,18 @@ const connectDB = async () => {
     const mongoUri = process.env.MONGODB_URI;
 
     if (!mongoUri) {
-      throw new Error("MONGODB_URI is not set");
+      console.warn("MONGODB_URI is not set; starting server without a database connection");
+      return false;
     }
 
     await mongoose.connect(mongoUri);
 
     console.log("MongoDB Connected");
+    return true;
   } catch (error) {
     console.log("Failed to connect to MongoDB:", error.message);
-    process.exit(1); // stop server if DB fails
+    console.warn("Starting server without a database connection");
+    return false;
   }
 };
 

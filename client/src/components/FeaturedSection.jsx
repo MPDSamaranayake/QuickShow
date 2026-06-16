@@ -1,13 +1,35 @@
 import { ArrowRight } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import React, { use } from 'react'
+import React, { useState, useEffect } from 'react'
 import BlurCircle from './BlurCircle';
 import MovieCard from './MovieCard';
-import { dummyShowsData } from '../assets/assets';
+import useApi from '../hooks/useApi';
+import Loading from './Loading';
 
 const FeaturedSection = () => {
-
   const navigate = useNavigate();
+  const { request } = useApi();
+  const [movies, setMovies] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMovies = async () => {
+      try {
+        const data = await request('/api/movies?status=running');
+        setMovies(data);
+      } catch (error) {
+        console.error('Failed to fetch featured movies:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMovies();
+  }, []);
+
+  if (loading) {
+    return <div className="py-20 flex justify-center"><Loading /></div>;
+  }
+
   return (
     <div className='px-6 md:px-16 lg:px-24 xl:px-44 overflow-hidden'>
         <div className='relative flex items-center justify-between pt-20 pb-10'>
@@ -20,7 +42,7 @@ const FeaturedSection = () => {
 
         </div>
         <div className='flex gap-4 overflow-x-auto pb-4'>
-          {dummyShowsData.slice(0, 4).map((show) => (
+          {movies.slice(0, 4).map((show) => (
             <MovieCard key={show._id} movie={show} />
           ))}
         </div>
@@ -35,4 +57,4 @@ const FeaturedSection = () => {
   )
 }
 
-export default FeaturedSection
+export default FeaturedSection;

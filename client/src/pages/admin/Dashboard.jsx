@@ -1,20 +1,22 @@
 import { ChartLineIcon, CircleDollarSignIcon, PlayCircleIcon, StarIcon, UserIcon } from 'lucide-react';
-import React, { useEffect } from 'react'
-import { dummyDashboardData } from '../../assets/assets';
+import React, { useEffect, useState } from 'react'
 import Loading from '../../components/Loading';
 import Title from '../../components/admin/Title';
 import BlurCircle from '../../components/BlurCircle';
 import { dateFormat } from '../../lib/dateFormat';
+import useApi from '../../hooks/useApi';
+
 const Dashboard = () => {
     const currency = import.meta.env.VITE_CURRENCY_SYMBOL || '$'
+    const { request } = useApi();
 
-    const [dashboardData, setDashboardData] = React.useState({
+    const [dashboardData, setDashboardData] = useState({
         totalRevenue: 0,
         totalBookings: 0,
         activeShows: [],
         totalUser: 0,
     });
-    const [loading, setLoading] = React.useState(true);
+    const [loading, setLoading] = useState(true);
 
     const dashboardCards = [
         { title: "Total Bookings", value: dashboardData.totalBookings || "0", icon: ChartLineIcon },
@@ -24,8 +26,15 @@ const Dashboard = () => {
     ]
 
     const fetchDashboardData = async () => {
-        setDashboardData(dummyDashboardData)
-        setLoading(false)
+        try {
+            setLoading(true);
+            const data = await request('/api/admin/dashboard');
+            setDashboardData(data);
+        } catch (error) {
+            console.error("Failed to fetch dashboard data:", error);
+        } finally {
+            setLoading(false);
+        }
     };
     useEffect(() => {
         fetchDashboardData();

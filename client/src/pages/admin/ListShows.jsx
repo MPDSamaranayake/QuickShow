@@ -1,36 +1,29 @@
-import React from 'react'
-import { dummyShowsData } from '../../assets/assets'
+import React, { useState, useEffect } from 'react'
 import Title from '../../components/admin/Title'
 import Loading from '../../components/Loading'
-import { useEffect } from 'react'
 import { dateFormat } from '../../lib/dateFormat'
+import useApi from '../../hooks/useApi'
 
 const ListShows = () => {
+    const currency = import.meta.env.REACT_APP_CURRENCY_SYMBOL || '$'
+    const { request } = useApi();
 
-    const currency =import.meta.env.REACT_APP_CURRENCY_SYMBOL || '$'
-
-    const [shows, setShows] = React.useState([])
-    const [loading, setLoading] = React.useState(true)
+    const [shows, setShows] = useState([])
+    const [loading, setLoading] = useState(true)
 
     const getALLShows = async () => {
         try {
-
-            setShows([{
-                movie: dummyShowsData[0],
-                showDateTime: "2024-12-31T20:00:00Z",
-                showPrice: 15,
-                occupiedSeats: {
-                    A1: "user_1",
-                    B1: "user_2",
-                    C1: "user_3",
-                }
-            }]);
-            setLoading(false);
+            setLoading(true);
+            const data = await request('/api/shows');
+            setShows(data);
         } catch (error) {
-            console.error(error);
+            console.error("Failed to fetch shows:", error);
+        } finally {
+            setLoading(false);
         }
     }
-    React.useEffect(() => {
+
+    useEffect(() => {
         getALLShows();
     }, []);
   return !loading ? (

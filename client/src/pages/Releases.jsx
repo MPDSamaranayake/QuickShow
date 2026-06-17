@@ -6,9 +6,10 @@ import Loading from "../components/Loading";
 import { SearchIcon, Film } from "lucide-react";
 import { dummyShowsData } from "../assets/assets";
 
-const Movies = () => {
+const Releases = () => {
   const { request } = useApi();
-  const [nowShowingMovies, setNowShowingMovies] = useState([]);
+  const [comingSoonMovies, setComingSoonMovies] = useState([]);
+  const [releaseMovies, setReleaseMovies] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Filter States
@@ -30,9 +31,13 @@ const Movies = () => {
       }
 
       const queryString = queryParams.toString();
-      const runningMovies = await request(`/api/movies?status=now_showing${queryString ? `&${queryString}` : ''}`);
+      const [comingMovies, allMovies] = await Promise.all([
+        request(`/api/movies?status=coming_soon${queryString ? `&${queryString}` : ''}`),
+        request(`/api/movies${queryString ? `?${queryString}` : ''}`)
+      ]);
 
-      setNowShowingMovies(runningMovies);
+      setComingSoonMovies(comingMovies);
+      setReleaseMovies(allMovies);
     } catch (error) {
       console.error('Failed to fetch movies:', error);
     } finally {
@@ -68,8 +73,17 @@ const Movies = () => {
       releaseDate: movie.release_date
     }));
 
-  const displayedMovies = [
-    ...nowShowingMovies,
+  const dummyComingSoon = filteredDummyMovies.filter(m => m.status === 'upcoming' || m.status === 'coming_soon' || m.title === "Thunderbolts*" || m.title === "Lilo & Stitch");
+
+  const displayedComingSoon = [
+    ...comingSoonMovies,
+    ...dummyComingSoon
+  ].filter((movie, index, self) => 
+    self.findIndex(m => m._id === movie._id || m.title === movie.title) === index
+  );
+
+  const displayedReleases = [
+    ...releaseMovies,
     ...filteredDummyMovies
   ].filter((movie, index, self) => 
     self.findIndex(m => m._id === movie._id || m.title === movie.title) === index
@@ -88,7 +102,7 @@ const Movies = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search now showing movies..."
+            placeholder="Search movie releases..."
             className="w-full bg-black/40 border border-gray-700/60 rounded-xl pl-12 pr-4 py-3 text-white outline-none focus:border-primary transition-colors text-sm"
           />
         </div>
@@ -117,19 +131,35 @@ const Movies = () => {
         </div>
       ) : (
         <>
-          {/* Now Showing Section Only */}
+          {/* Coming Soon Section */}
           <section className="mb-14">
             <h1 className="text-xl font-semibold my-6 text-white flex items-center gap-2">
-              <Film className="w-5 h-5 text-primary" /> Now Showing
+              <Film className="w-5 h-5 text-primary" /> Coming Soon
             </h1>
-            {displayedMovies.length > 0 ? (
+            {displayedComingSoon.length > 0 ? (
               <div className="flex flex-wrap max-sm:justify-center gap-8">
-                {displayedMovies.map((movie) => (
+                {displayedComingSoon.map((movie) => (
                   <MovieCard movie={movie} key={movie._id} />
                 ))}
               </div>
             ) : (
-              <p className="text-gray-400 text-sm">No now showing movies available matching the filters.</p>
+              <p className="text-gray-400 text-sm">No coming soon movies available matching the filters.</p>
+            )}
+          </section>
+
+          {/* Releases Section */}
+          <section>
+            <h2 className="text-xl font-semibold my-6 text-white flex items-center gap-2">
+              <Film className="w-5 h-5 text-primary" /> Releases
+            </h2>
+            {displayedReleases.length > 0 ? (
+              <div className="flex flex-wrap max-sm:justify-center gap-8">
+                {displayedReleases.map((movie) => (
+                  <MovieCard movie={movie} key={movie._id} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-400 text-sm">No movie releases available matching the filters.</p>
             )}
           </section>
         </>
@@ -138,4 +168,4 @@ const Movies = () => {
   );
 };
 
-export default Movies;
+export default Releases;

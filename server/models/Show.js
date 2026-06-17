@@ -8,6 +8,8 @@ const lockedSeatSchema = new mongoose.Schema({
 
 const showSchema = new mongoose.Schema({
     movie: { type: mongoose.Schema.Types.ObjectId, ref: 'Movie', required: true },
+    showName: { type: String, required: true },
+    showArtwork: { type: String, required: true },
     theater: { type: mongoose.Schema.Types.ObjectId, ref: 'Theater' },
     showDateTime: { type: Date, required: true },
     showPrice: { type: Number, required: true },

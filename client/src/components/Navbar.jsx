@@ -29,7 +29,7 @@ const Navbar = () => {
             <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/'>Home</Link>
             <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/movies'>Movies</Link>
             <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/theaters'>Theaters</Link>
-            <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/movies'>Releases</Link>
+            <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/releases'>Releases</Link>
             <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/favourites'>Favourites</Link>
             
             </div>
@@ -40,7 +40,7 @@ const Navbar = () => {
             <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/'>Home</Link>
             <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/movies'>Movies</Link>
             <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/theaters'>Theaters</Link>
-            <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/movies'>Releases</Link>
+            <Link onClick={() => {scrollTo(0, 0); setIsOpen(false)}} to='/releases'>Releases</Link>
             <Link onClick={() => {scrollTo(0, 0), setIsOpen(false)}} to='/favourites'>Favourites</Link>
           </div>
         </div>

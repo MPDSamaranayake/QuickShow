@@ -1,204 +1,271 @@
-import React, { useEffect, useState} from 'react'
-import Loading from '../../components/Loading';
+import React, { useEffect, useRef, useState } from 'react';
 import Title from '../../components/admin/Title';
-import { CheckIcon, StarIcon, Calendar, DeleteIcon } from 'lucide-react';
-import { kConverter } from '../../lib/kConverter';
+import { UploadCloud, Image as ImageIcon, X } from 'lucide-react';
 import useApi from '../../hooks/useApi';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 const AddShows = () => {
-    const currency = import.meta.env.REACT_APP_CURRENCY_SYMBOL || '$'
     const { request } = useApi();
-    const [nowwPlayingMovies, setNowPlayingMovies] = useState([]);
-    const [selectedMovie, setSelectedMovie] = useState(null);
-    const [dateTimeSelection, setDateTimeSelection] = useState({});
-    const [dateTimeInput, setDateTimeInput] = useState('');
-    const [showPrice, setShowPrice] = useState('');
+    const navigate = useNavigate();
     
-    const fetchNowPlayingMovies = async () => {
-        try {
-            const data = await request('/api/movies');
-            setNowPlayingMovies(data);
-        } catch (error) {
-            console.error("Failed to fetch movies for shows selection:", error);
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [genre, setGenre] = useState('');
+    const [duration, setDuration] = useState('');
+    const [releaseDate, setReleaseDate] = useState('');
+    const [status, setStatus] = useState('now_showing');
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState('');
+    const fileInputRef = useRef(null);
+
+    const handleUploadChange = (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please upload an image file.');
+            event.target.value = '';
+            return;
         }
-    };
 
-    const handleDateTimeAdd = () => {
-        if (!dateTimeInput) return;
-        const [date, time] =dateTimeInput.split("T");
-        if (!date || !time) return;
-
-        setDateTimeSelection((prev) => {
-            const times = prev[date] || [];
-            if (!times.includes(time)) {
-                return { ...prev, [date]: [...times, time] };
+        setImageFile(file);
+        const objectUrl = URL.createObjectURL(file);
+        setImagePreview((currentPreview) => {
+            if (currentPreview) {
+                URL.revokeObjectURL(currentPreview);
             }
-            return prev;
+            return objectUrl;
         });
     };
 
-    const handleRemoveTime = (date, time) => {
-        setDateTimeSelection((prev) => {
-            const filteredTimes = prev[date].filter((t) => t !== time);
-            if (filteredTimes.length === 0) {
-                const { [date]: _, ...rest } = prev;
-                return rest;
+    const clearUploadPreview = () => {
+        setImagePreview((currentPreview) => {
+            if (currentPreview) {
+                URL.revokeObjectURL(currentPreview);
             }
-            return {
-                ...prev,
-                [date]: filteredTimes,
-            };
+            return '';
         });
+        setImageFile(null);
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
     };
 
-    const handleAddShowSubmit = async () => {
-        if (!selectedMovie) {
-            return toast.error("Please select a movie.");
-        }
-        if (!showPrice || Number(showPrice) <= 0) {
-            return toast.error("Please enter a valid show price.");
-        }
-        if (Object.keys(dateTimeSelection).length === 0) {
-            return toast.error("Please select at least one show date and time.");
-        }
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!title.trim()) return toast.error("Please enter a movie title.");
+        if (!description.trim()) return toast.error("Please enter a description.");
+        if (!genre.trim()) return toast.error("Please enter a genre.");
+        if (!duration || Number(duration) <= 0) return toast.error("Please enter a valid duration.");
+        if (!releaseDate) return toast.error("Please select a release date.");
+        if (!imageFile) return toast.error("Please upload a poster image.");
 
         try {
-            const showsToCreate = [];
-            Object.entries(dateTimeSelection).forEach(([date, times]) => {
-                times.forEach((time) => {
-                    const [hour, minute] = time.split(':').map(Number);
-                    const [year, month, day] = date.split('-').map(Number);
-                    // Generate Date in local time context
-                    const showDateTime = new Date(year, month - 1, day, hour, minute);
+            const formData = new FormData();
+            formData.append('title', title.trim());
+            formData.append('description', description.trim());
+            formData.append('genre', genre.trim());
+            formData.append('duration', Number(duration));
+            formData.append('releaseDate', releaseDate);
+            formData.append('status', status);
+            formData.append('image', imageFile);
 
-                    showsToCreate.push({
-                        movie: selectedMovie,
-                        showDateTime,
-                        showPrice: Number(showPrice)
-                    });
-                });
-            });
-
-            await request('/api/shows', {
+            await request('/api/movies', {
                 method: 'POST',
-                body: JSON.stringify({ shows: showsToCreate })
+                body: formData
             });
 
-            toast.success("Shows added successfully!");
-            setSelectedMovie(null);
-            setShowPrice('');
-            setDateTimeSelection({});
+            toast.success("Movie added successfully!");
+            setTitle('');
+            setDescription('');
+            setGenre('');
+            setDuration('');
+            setReleaseDate('');
+            setStatus('now_showing');
+            setImageFile(null);
+            setImagePreview('');
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+
+            // Redirect to Dashboard to view the now showing movies
+            navigate('/admin/dashboard');
         } catch (error) {
-            toast.error(error.message || "Failed to add shows.");
+            toast.error(error.message || "Failed to add movie.");
         }
     };
 
     useEffect(() => {
-        fetchNowPlayingMovies();
-    }, []);
-    return nowwPlayingMovies.length > 0 ? (
+        return () => {
+            if (imagePreview) {
+                URL.revokeObjectURL(imagePreview);
+            }
+        };
+    }, [imagePreview]);
+
+    return (
         <>
-            <Title text1="Add" text2="Shows" />
-            <p className='mt-10 text-lg font-medium'>Now Playing Movies</p>
-            <div className='overflow-x-auto pb-4'>
-                <div className='group flex flex-wrap gap-4 mt-4 w-max'>
-                    {nowwPlayingMovies.map((movie) => (
-                        <div
-                            key={movie._id}
-                            className='relative max-w-40 cursor-pointer group-hover:not-hover:opacity-40 hover:-translate-y-1 transition duration-300'
-                            onClick={() => setSelectedMovie(movie._id)}
+            <Title text1="Add" text2="Movie" />
+            <form onSubmit={handleSubmit} className='mt-8 max-w-4xl space-y-6'>
+                <div className='grid gap-6 md:grid-cols-2'>
+                    <div>
+                        <label className='block text-sm font-medium mb-2 text-gray-300'>Movie Title</label>
+                        <input
+                            type='text'
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder='Enter movie title'
+                            className='w-full rounded-md border border-gray-600 bg-transparent px-4 py-2 text-white outline-none focus:border-primary transition-colors'
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className='block text-sm font-medium mb-2 text-gray-300'>Genre</label>
+                        <input
+                            type='text'
+                            value={genre}
+                            onChange={(e) => setGenre(e.target.value)}
+                            placeholder='e.g. Action, Comedy, Drama'
+                            className='w-full rounded-md border border-gray-600 bg-transparent px-4 py-2 text-white outline-none focus:border-primary transition-colors'
+                            required
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label className='block text-sm font-medium mb-2 text-gray-300'>Description</label>
+                    <textarea
+                        rows={4}
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        placeholder='Enter movie description / overview'
+                        className='w-full rounded-md border border-gray-600 bg-transparent px-4 py-2 text-white outline-none focus:border-primary transition-colors resize-none'
+                        required
+                    />
+                </div>
+
+                <div className='grid gap-6 md:grid-cols-3'>
+                    <div>
+                        <label className='block text-sm font-medium mb-2 text-gray-300'>Duration (Minutes)</label>
+                        <input
+                            type='number'
+                            min={1}
+                            value={duration}
+                            onChange={(e) => setDuration(e.target.value)}
+                            placeholder='e.g. 120'
+                            className='w-full rounded-md border border-gray-600 bg-transparent px-4 py-2 text-white outline-none focus:border-primary transition-colors'
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className='block text-sm font-medium mb-2 text-gray-300'>Release Date</label>
+                        <input
+                            type='date'
+                            value={releaseDate}
+                            onChange={(e) => setReleaseDate(e.target.value)}
+                            className='w-full rounded-md border border-gray-600 bg-transparent px-4 py-2 text-white outline-none focus:border-primary transition-colors [color-scheme:dark]'
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label className='block text-sm font-medium mb-2 text-gray-300'>Status</label>
+                        <select
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value)}
+                            className='w-full rounded-md border border-gray-600 bg-gray-900 px-4 py-2 text-white outline-none focus:border-primary transition-colors'
                         >
-                            <div className='relative rounded-lg overflow-hidden'>
-                                <img src={movie.poster_path} alt="" className='w-full object-cover brightness-90' />
-                                <div className='text-sm flex items-center justify-between p-2 bg-black/70 w-full absolute bottom-0 left-0'>
-                                    <p className='flex items-center gap-1 text-gray-400'>
-                                        <StarIcon className="w-4 h-4 text-primary fill-primary" />
-                                        {movie.vote_average.toFixed(1)}
-                                    </p>
-                                    <p className='text-gray-300'>
-                                        {kConverter(movie.vote_count)} Votes
-                                    </p>
-                                </div>
+                            <option value='now_showing'>Now Showing</option>
+                            <option value='coming_soon'>Coming Soon</option>
+                        </select>
+                    </div>
+                </div>
+
+                {/* Upload Image Section */}
+                <div className='rounded-2xl border border-dashed border-gray-600 bg-white/5 p-5 md:p-6'>
+                    <div className='flex flex-col gap-5 md:flex-row md:items-center md:justify-between'>
+                        <div className='flex items-start gap-4'>
+                            <div className='flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary'>
+                                <UploadCloud className='h-7 w-7' />
                             </div>
-                            {selectedMovie === movie._id && (
-                                <div className='absolute top-2 right-2 flex items-center justify-center bg-primary h-6 w-6 rounded'>
-                                    <CheckIcon className='w-4 h-4 text-white' strokeWidth={2.5} />
+                            <div>
+                                <h2 className='text-lg font-medium text-white'>Upload Movie Poster</h2>
+                                <p className='mt-1 text-sm text-gray-400'>
+                                    Select a high-quality poster image for the movie card. JPG, PNG, or WebP is recommended.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className='flex gap-3'>
+                            <button
+                                type='button'
+                                onClick={() => fileInputRef.current?.click()}
+                                className='inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary/90 cursor-pointer'
+                            >
+                                <UploadCloud className='h-4 w-4' />
+                                Choose Image
+                            </button>
+                            {imagePreview && (
+                                <button
+                                    type='button'
+                                    onClick={clearUploadPreview}
+                                    className='inline-flex items-center gap-2 rounded-lg border border-gray-600 px-4 py-2 text-sm font-medium text-gray-200 transition hover:border-gray-400 cursor-pointer'
+                                >
+                                    <X className='h-4 w-4' />
+                                    Remove
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <input
+                        ref={fileInputRef}
+                        type='file'
+                        accept='image/*'
+                        className='hidden'
+                        onChange={handleUploadChange}
+                    />
+
+                    <div className='mt-5 grid gap-4 md:grid-cols-[220px_minmax(0,1fr)]'>
+                        <div className='flex h-48 items-center justify-center overflow-hidden rounded-xl border border-gray-700 bg-black/30'>
+                            {imagePreview ? (
+                                <img
+                                    src={imagePreview}
+                                    alt='Poster preview'
+                                    className='h-full w-full object-cover'
+                                />
+                            ) : (
+                                <div className='text-center text-gray-500'>
+                                    <ImageIcon className='mx-auto h-10 w-10 text-gray-500' />
+                                    <p className='mt-2 text-sm'>No image selected</p>
                                 </div>
                             )}
-                            <p className='font-medium truncate'>{movie.title}</p>
-                            <p className='text-gray-400 text-sm'>{movie.release_date}</p>
                         </div>
-                    ))}
+
+                        <div className='flex flex-col justify-center rounded-xl border border-gray-700 bg-black/20 p-4 text-sm text-gray-300'>
+                            <p className='font-medium text-white'>File Requirements</p>
+                            <ul className='list-disc pl-5 mt-2 space-y-1 text-gray-400'>
+                                <li>Aspect ratio: Vertical poster orientation preferred (e.g. 2:3)</li>
+                                <li>Maximum file size: 5MB</li>
+                                <li>The image will be securely saved to the database.</li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            {/* Show Price Input */}
-            <div className='mt-8'>
-                <label className='block text-sm font-medium mb-2'>Show Price</label>
-                <div className='relative border border-gray-600 rounded-md w-56'>
-                    <span className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400'>{currency}</span>
-                    <input
-                        min={0}
-                        type='number'
-                        value={showPrice}
-                        onChange={(e) => setShowPrice(e.target.value)}
-                        placeholder="Enter show price"
-                        className='outline-none bg-transparent w-full pl-10 pr-3 py-2 text-left'
-                        aria-label='Show price'
-                    />
-                </div>
-            </div>
-            {/* Date and Time Selection */}
-            <div className='mt-6'>
-                <label className='block text-sm font-medium mb-2'> Select Date and Time</label>
-                <div className='relative inline-block'>
-                    <Calendar className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400' />
-                    <input
-                        type='datetime-local'
-                        value={dateTimeInput}
-                        onChange={(e) => setDateTimeInput(e.target.value)}
-                        className="outline-none rounded-md pl-10"
-                    />
-                </div>
-                <button onClick={handleDateTimeAdd} className='ml-3 bg-primary/80 text-white px-3 py-2 text-sm rounded-lg hover:bg-primary cursor-pointer'>
-                    Add Time
+
+                <button
+                    type='submit'
+                    className='bg-primary text-white px-8 py-3 rounded-lg hover:bg-primary/90 transition-all font-medium cursor-pointer shadow-lg shadow-primary/20'
+                >
+                    Add Movie
                 </button>
-            </div>
-            {/* Display Selected Date and Time */}
-            {Object.keys(dateTimeSelection).length > 0 && (
-                <div className='mt-6'>
-                    <h2 className='mb-2'>Selected Date-Time</h2>
-                    <ul className='space-y-3'>
-                    {Object.entries(dateTimeSelection).map(([date, times]) => (
-                        <li key={date}>
-                            <div className='font-medium'>{date}</div>
-                            <div className='flex flex-wrap gap-2 mt-1 text-sm'>
-                                {times.map((time) => (
-                                    <div key={time} className='border border-primary px-2 py-1 flex items-center rounded'>
-                                        <span>{time}</span>
-                                        <DeleteIcon
-                                            width={15}
-                                            className="ml-2 text-red-500 hover:text-red-700 cursor-pointer"
-                                            onClick={() => handleRemoveTime(date, time)}
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </li>
-                    ))}
-                    </ul>
-                </div>
-            )}
-            <button 
-                onClick={handleAddShowSubmit}
-                className='bg-primary text-white px-8 py-2 mt-6 rounded hover:bg-primary/90 transition-all cursor=pointer'
-            >
-                Add Show
-            </button>
+            </form>
         </>
-    ) : (
-        <Loading />
     );
 };
 
-export default AddShows
+export default AddShows;

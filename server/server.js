@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 import connectDB from './configs/db.js';
 import { clerkMiddleware } from '@clerk/express';
 import { serve } from 'inngest/express';
@@ -18,6 +20,11 @@ import { serveSwagger } from './configs/swagger.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
+const uploadsDir = join(process.cwd(), 'uploads', 'shows');
+
+if (!existsSync(uploadsDir)) {
+  mkdirSync(uploadsDir, { recursive: true });
+}
 
 // ✅ Connect to MongoDB (ONLY ONCE)
 await connectDB();
@@ -26,6 +33,7 @@ await connectDB();
 app.use(cors());
 app.use(express.json());
 app.use(clerkMiddleware());
+app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
 // Rate Limiting
 const apiLimiter = rateLimit({

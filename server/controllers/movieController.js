@@ -6,7 +6,52 @@ import Show from '../models/Show.js';
 // @access  Private/Admin
 export const createMovie = async (req, res) => {
     try {
-        const movie = await Movie.create(req.body);
+        const movieData = { ...req.body };
+
+        // Handle uploaded image file
+        if (req.file) {
+            movieData.posterUrl = `${req.protocol}://${req.get('host')}/uploads/movies/${req.file.filename}`;
+            movieData.poster_path = movieData.posterUrl;
+            movieData.backdrop_path = movieData.posterUrl;
+        } else if (movieData.posterUrl) {
+            movieData.poster_path = movieData.posterUrl;
+            movieData.backdrop_path = movieData.posterUrl;
+        }
+
+        // Map fields for backward compatibility
+        if (movieData.description) {
+            movieData.overview = movieData.description;
+        }
+        if (movieData.genre) {
+            movieData.genres = [{ id: Date.now(), name: movieData.genre }];
+        }
+        if (movieData.duration) {
+            movieData.runtime = Number(movieData.duration);
+        }
+        if (movieData.releaseDate) {
+            movieData.release_date = new Date(movieData.releaseDate).toISOString().split('T')[0];
+        }
+
+        // Map status
+        if (movieData.status) {
+            if (movieData.status === 'running') {
+                movieData.status = 'now_showing';
+            } else if (movieData.status === 'upcoming') {
+                movieData.status = 'coming_soon';
+            }
+        } else {
+            movieData.status = 'now_showing';
+        }
+
+        // Fallbacks
+        if (!movieData.casts) {
+            movieData.casts = [];
+        }
+        if (!movieData.original_language) {
+            movieData.original_language = 'en';
+        }
+
+        const movie = await Movie.create(movieData);
         res.status(201).json(movie);
     } catch (error) {
         console.error('Create Movie Error:', error);
@@ -27,9 +72,12 @@ export const getAllMovies = async (req, res) => {
             query.title = { $regex: search, $options: 'i' };
         }
 
-        // Filter by genre name
+        // Filter by genre name (supports both new single string genre and array genres)
         if (genre) {
-            query['genres.name'] = { $regex: new RegExp(`^${genre}$`, 'i') };
+            query.$or = [
+                { 'genres.name': { $regex: new RegExp(`^${genre}$`, 'i') } },
+                { genre: { $regex: new RegExp(`^${genre}$`, 'i') } }
+            ];
         }
 
         // Filter by language
@@ -37,13 +85,40 @@ export const getAllMovies = async (req, res) => {
             query.original_language = { $regex: new RegExp(`^${language}$`, 'i') };
         }
 
-        // Filter by status (upcoming, running, ended)
+        // Filter by status (upcoming, running, ended, now_showing, coming_soon)
         if (status) {
-            query.status = status;
+            if (status === 'now_showing' || status === 'running') {
+                query.status = { $in: ['now_showing', 'running'] };
+            } else if (status === 'coming_soon' || status === 'upcoming') {
+                query.status = { $in: ['coming_soon', 'upcoming'] };
+            } else {
+                query.status = status;
+            }
         }
 
         const movies = await Movie.find(query).sort({ release_date: -1 });
-        res.json(movies);
+        const movieIds = movies.map((movie) => movie._id);
+        const shows = await Show.find({ movie: { $in: movieIds } }).sort({ createdAt: -1 });
+
+        const latestShowByMovieId = new Map();
+        shows.forEach((show) => {
+            const movieId = show.movie.toString();
+            if (!latestShowByMovieId.has(movieId)) {
+                latestShowByMovieId.set(movieId, show);
+            }
+        });
+
+        const enrichedMovies = movies.map((movie) => {
+            const latestShow = latestShowByMovieId.get(movie._id.toString());
+
+            return {
+                ...movie.toObject(),
+                showName: latestShow?.showName || movie.title,
+                showArtwork: latestShow?.showArtwork || movie.backdrop_path,
+            };
+        });
+
+        res.json(enrichedMovies);
     } catch (error) {
         console.error('Get All Movies Error:', error);
         res.status(500).json({ message: 'Error fetching movies.' });
@@ -81,8 +156,14 @@ export const getMovieById = async (req, res) => {
             dateTime[date].sort((a, b) => new Date(a.time) - new Date(b.time));
         });
 
+        const latestShow = await Show.findOne({ movie: movie._id }).sort({ createdAt: -1 });
+
         res.json({
-            movie,
+            movie: {
+                ...movie.toObject(),
+                showName: latestShow?.showName || movie.title,
+                showArtwork: latestShow?.showArtwork || movie.backdrop_path,
+            },
             dateTime
         });
     } catch (error) {

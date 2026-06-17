@@ -8,6 +8,9 @@ import {
 
 const cloneData = (value) => JSON.parse(JSON.stringify(value));
 
+// Token cache to avoid repeated Clerk calls
+let tokenCache = { token: null, expiresAt: 0 };
+
 const buildMovieDetails = (movie) => ({
     _id: movie._id,
     movie,
@@ -77,16 +80,40 @@ export const useApi = () => {
     const { getToken, userId } = useAuth();
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
 
+    const getTokenWithTimeout = async () => {
+        try {
+            // Return cached token if still valid
+            if (tokenCache.token && tokenCache.expiresAt > Date.now()) {
+                return tokenCache.token;
+            }
+
+            // Timeout token retrieval to 3 seconds to prevent hanging
+            const tokenPromise = getToken();
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Token retrieval timeout')), 3000)
+            );
+
+            const token = await Promise.race([tokenPromise, timeoutPromise]);
+            
+            // Cache token for 4 minutes
+            tokenCache = { 
+                token, 
+                expiresAt: Date.now() + 240000 
+            };
+            
+            return token;
+        } catch (err) {
+            console.warn("Token retrieval failed or timed out:", err);
+            return null;
+        }
+    };
+
     const request = async (endpoint, options = {}) => {
         const headers = { ...(options.headers || {}) };
         
-        try {
-            const token = await getToken();
-            if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-            }
-        } catch (err) {
-            console.warn("Failed to retrieve Clerk token:", err);
+        const token = await getTokenWithTimeout();
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
         }
 
         // Fallback to custom token from localStorage if custom login was used
@@ -100,10 +127,17 @@ export const useApi = () => {
         }
 
         try {
+            // Add 10-second request timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
             const response = await fetch(`${baseUrl}${endpoint}`, {
                 ...options,
-                headers
+                headers,
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));

@@ -12,18 +12,27 @@ const genreSchema = new mongoose.Schema({
 
 const movieSchema = new mongoose.Schema({
     title: { type: String, required: true },
-    overview: { type: String, required: true },
-    poster_path: { type: String, required: true },
-    backdrop_path: { type: String, required: true },
-    genres: { type: [genreSchema], required: true },
-    casts: { type: [castSchema], required: true },
-    release_date: { type: String, required: true },
-    original_language: { type: String, required: true },
+    overview: { type: String },
+    description: { type: String },
+    poster_path: { type: String },
+    posterUrl: { type: String },
+    backdrop_path: { type: String },
+    genre: { type: String },
+    genres: { type: [genreSchema], default: [] },
+    casts: { type: [castSchema], default: [] },
+    release_date: { type: String },
+    releaseDate: { type: Date },
+    original_language: { type: String, default: 'en' },
     tagline: { type: String, default: '' },
     vote_average: { type: Number, default: 0 },
     vote_count: { type: Number, default: 0 },
-    runtime: { type: Number, required: true },
-    status: { type: String, enum: ['upcoming', 'running', 'ended'], default: 'running' }
+    runtime: { type: Number },
+    duration: { type: Number },
+    status: { 
+        type: String, 
+        enum: ['upcoming', 'running', 'ended', 'now_showing', 'coming_soon'], 
+        default: 'now_showing' 
+    }
 }, { timestamps: true });
 
 const Movie = mongoose.model('Movie', movieSchema);

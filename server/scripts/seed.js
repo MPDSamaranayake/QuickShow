@@ -212,6 +212,8 @@ const seedDB = async () => {
                         theater: theater._id,
                         showDateTime,
                         showPrice: showPriceList[Math.floor(Math.random() * showPriceList.length)],
+                        showName: movie.title,
+                        showArtwork: movie.poster_path,
                         occupiedSeats: {}
                     });
                     showCount++;

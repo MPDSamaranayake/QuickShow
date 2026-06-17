@@ -20,10 +20,13 @@ const MovieDetails = () => {
   const getShow = async () => {
     try {
       setLoading(true);
-      const data = await request(`/api/movies/${id}`);
-      setShow(data);
+      // Fetch movie details and recommendations in parallel
+      const [data, moviesList] = await Promise.all([
+        request(`/api/movies/${id}`),
+        request('/api/movies?status=running')
+      ]);
       
-      const moviesList = await request('/api/movies?status=running');
+      setShow(data);
       setRecommended(moviesList.filter(m => m._id !== id).slice(0, 4));
     } catch (error) {
       console.error('Failed to fetch movie details:', error);

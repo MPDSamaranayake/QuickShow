@@ -1,20 +1,22 @@
 import express from 'express';
-import { 
-    createTheater, 
-    getAllTheaters, 
-    getTheaterById, 
-    updateTheater, 
-    deleteTheater 
+import {
+    createTheater,
+    getAllTheaters,
+    getTheaterById,
+    updateTheater,
+    deleteTheater
 } from '../controllers/theaterController.js';
-import { authenticateUser, authorizeRoles } from '../middlewares/auth.js';
+import { authenticateAdmin } from '../middlewares/adminAuth.js';
 
 const router = express.Router();
 
+// Public theater routes
 router.get('/', getAllTheaters);
 router.get('/:id', getTheaterById);
 
-router.post('/', authenticateUser, authorizeRoles('admin'), createTheater);
-router.put('/:id', authenticateUser, authorizeRoles('admin'), updateTheater);
-router.delete('/:id', authenticateUser, authorizeRoles('admin'), deleteTheater);
+// Admin-only theater mutation routes
+router.post('/', authenticateAdmin, createTheater);
+router.put('/:id', authenticateAdmin, updateTheater);
+router.delete('/:id', authenticateAdmin, deleteTheater);
 
 export default router;

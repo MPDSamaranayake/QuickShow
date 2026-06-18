@@ -5,8 +5,8 @@ import { dateFormat } from '../../lib/dateFormat'
 import useApi from '../../hooks/useApi'
 
 const ListShows = () => {
-    const currency = import.meta.env.REACT_APP_CURRENCY_SYMBOL || '$'
-    const { request } = useApi();
+    const currency = import.meta.env.VITE_CURRENCY || '$'
+    const { adminRequest } = useApi();
 
     const [shows, setShows] = useState([])
     const [loading, setLoading] = useState(true)
@@ -14,7 +14,7 @@ const ListShows = () => {
     const getALLShows = async () => {
         try {
             setLoading(true);
-            const data = await request('/api/shows');
+            const data = await adminRequest('/api/shows');
             setShows(data);
         } catch (error) {
             console.error("Failed to fetch shows:", error);

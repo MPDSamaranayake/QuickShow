@@ -1,12 +1,12 @@
 import express from 'express';
-import { 
-    createShow, 
-    getAllShows, 
-    getShowById, 
-    updateShow, 
-    deleteShow 
+import {
+    createShow,
+    getAllShows,
+    getShowById,
+    updateShow,
+    deleteShow
 } from '../controllers/showController.js';
-import { authenticateUser, authorizeRoles } from '../middlewares/auth.js';
+import { authenticateAdmin } from '../middlewares/adminAuth.js';
 import { validateShow } from '../middlewares/validation.js';
 import { uploadShowArtwork } from '../configs/upload.js';
 
@@ -18,7 +18,6 @@ const parseShowPayload = (req, res, next) => {
             return res.status(400).json({ message: 'Invalid shows payload.' });
         }
     }
-
     next();
 };
 
@@ -37,19 +36,26 @@ const validateBulkShowPayload = (req, res, next) => {
 
 const router = express.Router();
 
+// Public show routes
 router.get('/', getAllShows);
 router.get('/:id', getShowById);
 
-// Middleware validateShow only runs if it is not bulk (i.e. single insertion in req.body.movie check)
-router.post('/', authenticateUser, authorizeRoles('admin'), uploadShowArtwork.single('showArtwork'), parseShowPayload, (req, res, next) => {
-    if (req.body.shows && Array.isArray(req.body.shows)) {
-        return validateBulkShowPayload(req, res, next);
-    }
+// Admin-only show mutation routes
+router.post(
+    '/',
+    authenticateAdmin,
+    uploadShowArtwork.single('showArtwork'),
+    parseShowPayload,
+    (req, res, next) => {
+        if (req.body.shows && Array.isArray(req.body.shows)) {
+            return validateBulkShowPayload(req, res, next);
+        }
+        return validateShow(req, res, next);
+    },
+    createShow
+);
 
-    return validateShow(req, res, next);
-}, createShow);
-
-router.put('/:id', authenticateUser, authorizeRoles('admin'), updateShow);
-router.delete('/:id', authenticateUser, authorizeRoles('admin'), deleteShow);
+router.put('/:id', authenticateAdmin, updateShow);
+router.delete('/:id', authenticateAdmin, deleteShow);
 
 export default router;

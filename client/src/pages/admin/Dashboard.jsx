@@ -9,7 +9,7 @@ import { dummyShowsData } from '../../assets/assets';
 
 const Dashboard = () => {
     const currency = import.meta.env.VITE_CURRENCY_SYMBOL || '$';
-    const { request } = useApi();
+    const { request, adminRequest } = useApi();
 
     const [dashboardData, setDashboardData] = useState({
         totalRevenue: 0,
@@ -32,7 +32,7 @@ const Dashboard = () => {
         try {
             setLoading(true);
             const [stats, movies] = await Promise.all([
-                request('/api/admin/dashboard'),
+                adminRequest('/api/admin/dashboard'),
                 request('/api/movies?status=now_showing')
             ]);
             setDashboardData(stats);
@@ -57,7 +57,7 @@ const Dashboard = () => {
         }
 
         try {
-            await request(`/api/movies/${movieId}`, {
+            await adminRequest(`/api/movies/${movieId}`, {
                 method: 'DELETE'
             });
             toast.success("Movie deleted successfully!");

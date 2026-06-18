@@ -11,6 +11,8 @@ const cloneData = (value) => JSON.parse(JSON.stringify(value));
 // Token cache to avoid repeated Clerk calls
 let tokenCache = { token: null, expiresAt: 0 };
 
+const ADMIN_TOKEN_KEY = 'qs_admin_token';
+
 const buildMovieDetails = (movie) => ({
     _id: movie._id,
     movie,
@@ -47,10 +49,6 @@ const getDummyResponse = (endpoint, options = {}) => {
         return cloneData(buildMovieDetails(movie));
     }
 
-    if (method === 'GET' && endpoint === '/api/admin/dashboard') {
-        return cloneData(dummyDashboardData);
-    }
-
     if (method === 'GET' && endpoint === '/api/shows') {
         return cloneData(dummyDashboardData.activeShows);
     }
@@ -65,11 +63,7 @@ const getDummyResponse = (endpoint, options = {}) => {
         return cloneData(buildUserBookings());
     }
 
-    if (method === 'GET' && endpoint === '/api/admin/bookings') {
-        return cloneData(dummyBookingData);
-    }
-
-    if (method === 'POST' && (endpoint === '/api/bookings/lock' || endpoint === '/api/bookings' || endpoint.endsWith('/payment') || endpoint === '/api/shows')) {
+    if (method === 'POST' && (endpoint === '/api/bookings/lock' || endpoint === '/api/bookings' || endpoint.endsWith('/payment'))) {
         return { success: true };
     }
 
@@ -82,35 +76,35 @@ export const useApi = () => {
 
     const getTokenWithTimeout = async () => {
         try {
-            // Return cached token if still valid
             if (tokenCache.token && tokenCache.expiresAt > Date.now()) {
                 return tokenCache.token;
             }
 
-            // Timeout token retrieval to 3 seconds to prevent hanging
             const tokenPromise = getToken();
-            const timeoutPromise = new Promise((_, reject) => 
+            const timeoutPromise = new Promise((_, reject) =>
                 setTimeout(() => reject(new Error('Token retrieval timeout')), 3000)
             );
 
             const token = await Promise.race([tokenPromise, timeoutPromise]);
-            
-            // Cache token for 4 minutes
-            tokenCache = { 
-                token, 
-                expiresAt: Date.now() + 240000 
+
+            tokenCache = {
+                token,
+                expiresAt: Date.now() + 240000
             };
-            
+
             return token;
         } catch (err) {
-            console.warn("Token retrieval failed or timed out:", err);
+            console.warn('Token retrieval failed or timed out:', err);
             return null;
         }
     };
 
+    /**
+     * request() — for regular user API calls (uses Clerk token or custom user JWT)
+     */
     const request = async (endpoint, options = {}) => {
         const headers = { ...(options.headers || {}) };
-        
+
         const token = await getTokenWithTimeout();
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
@@ -127,7 +121,6 @@ export const useApi = () => {
         }
 
         try {
-            // Add 10-second request timeout
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -155,6 +148,48 @@ export const useApi = () => {
         }
     };
 
-    return { request, userId };
+    /**
+     * adminRequest() — for admin panel API calls (uses admin JWT from localStorage)
+     * Does NOT fall back to dummy data — admin operations must be real.
+     */
+    const adminRequest = async (endpoint, options = {}) => {
+        const headers = { ...(options.headers || {}) };
+
+        const adminToken = localStorage.getItem(ADMIN_TOKEN_KEY);
+        if (!adminToken) {
+            throw new Error('Admin session not found. Please log in again.');
+        }
+        headers['Authorization'] = `Bearer ${adminToken}`;
+
+        if (!(options.body instanceof FormData)) {
+            headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        try {
+            const response = await fetch(`${baseUrl}${endpoint}`, {
+                ...options,
+                headers,
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => ({}));
+                throw new Error(errData.message || 'Admin API request failed');
+            }
+
+            return response.json();
+        } catch (error) {
+            clearTimeout(timeoutId);
+            throw error;
+        }
+    };
+
+    return { request, adminRequest, userId };
 };
+
 export default useApi;

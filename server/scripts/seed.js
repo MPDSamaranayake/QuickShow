@@ -4,6 +4,7 @@ import Movie from '../models/Movie.js';
 import Show from '../models/Show.js';
 import Theater from '../models/Theater.js';
 import User from '../models/User.js';
+import Admin from '../models/Admin.js';
 
 const dummyCastsData = [
     { "name": "Milla Jovovich", "profile_path": "https://image.tmdb.org/t/p/original/usWnHCzbADijULREZYSJ0qfM00y.jpg" },
@@ -168,6 +169,7 @@ const seedDB = async () => {
         await Show.deleteMany({});
         await Theater.deleteMany({});
         await User.deleteMany({});
+        await Admin.deleteMany({});
         console.log('Cleared existing data.');
 
         // Insert Default Theater
@@ -222,6 +224,19 @@ const seedDB = async () => {
         }
 
         console.log(`Created ${showCount} shows across the next 7 days.`);
+
+        // Seed default admin account
+        const adminEmail = process.env.ADMIN_SEED_EMAIL || 'admin@quickshow.com';
+        const adminPassword = process.env.ADMIN_SEED_PASSWORD || 'Admin@123456';
+        await Admin.create({
+            name: process.env.ADMIN_SEED_NAME || 'Super Admin',
+            email: adminEmail.toLowerCase(),
+            password: adminPassword,
+            role: 'admin',
+        });
+        console.log(`\n✅ Admin account created — Email: ${adminEmail} | Password: ${adminPassword}`);
+        console.log('⚠️  Change the default admin password after first login!\n');
+
         console.log('Database seeded successfully!');
         process.exit(0);
     } catch (error) {

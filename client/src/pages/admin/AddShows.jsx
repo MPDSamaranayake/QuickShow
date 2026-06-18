@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
 const AddShows = () => {
-    const { request } = useApi();
+    const { adminRequest } = useApi();
     const navigate = useNavigate();
     
     const [title, setTitle] = useState('');
@@ -72,7 +72,7 @@ const AddShows = () => {
             formData.append('status', status);
             formData.append('image', imageFile);
 
-            await request('/api/movies', {
+            await adminRequest('/api/movies', {
                 method: 'POST',
                 body: formData
             });

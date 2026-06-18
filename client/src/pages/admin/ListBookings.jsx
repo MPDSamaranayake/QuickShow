@@ -6,7 +6,7 @@ import useApi from '../../hooks/useApi';
 
 const ListBookings = () => {
     const currency = import.meta.env.VITE_CURRENCY_SYMBOL || '$'
-    const { request } = useApi();
+    const { adminRequest } = useApi();
 
     const [bookings, setBookings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -14,7 +14,7 @@ const ListBookings = () => {
     const getALLBookings = async () => {
         try {
             setIsLoading(true);
-            const data = await request('/api/admin/bookings');
+            const data = await adminRequest('/api/admin/bookings');
             setBookings(data);
         } catch (error) {
             console.error("Failed to fetch admin bookings:", error);

@@ -1,5 +1,6 @@
 import Movie from '../models/Movie.js';
 import Show from '../models/Show.js';
+import Rating from '../models/Rating.js';
 
 // @desc    Create a new movie
 // @route   POST /api/movies
@@ -199,9 +200,72 @@ export const deleteMovie = async (req, res) => {
         }
         // Delete shows associated with this movie
         await Show.deleteMany({ movie: movie._id });
+        await Rating.deleteMany({ movie: movie._id });
         res.json({ message: 'Movie and its associated shows deleted successfully.' });
     } catch (error) {
         console.error('Delete Movie Error:', error);
         res.status(500).json({ message: 'Error deleting movie.' });
+    }
+};
+
+// @desc    Rate a movie (create or update user rating)
+// @route   POST /api/movies/:id/rate
+// @access  Private
+export const rateMovie = async (req, res) => {
+    try {
+        const { rating } = req.body;
+        const userId = req.user._id;
+        const movieId = req.params.id;
+
+        if (!rating || rating < 1 || rating > 5) {
+            return res.status(400).json({ message: 'Rating must be between 1 and 5.' });
+        }
+
+        const movie = await Movie.findById(movieId);
+        if (!movie) {
+            return res.status(404).json({ message: 'Movie not found.' });
+        }
+
+        // Upsert the user's rating
+        await Rating.findOneAndUpdate(
+            { user: userId, movie: movieId },
+            { rating },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+
+        // Recalculate average from all ratings for this movie
+        const allRatings = await Rating.find({ movie: movieId });
+        const totalRatings = allRatings.length;
+        const avgRating = allRatings.reduce((sum, r) => sum + r.rating, 0) / totalRatings;
+
+        movie.vote_average = Math.round(avgRating * 10) / 10;
+        movie.vote_count = totalRatings;
+        await movie.save();
+
+        res.json({
+            message: 'Rating submitted successfully.',
+            userRating: rating,
+            vote_average: movie.vote_average,
+            vote_count: movie.vote_count
+        });
+    } catch (error) {
+        console.error('Rate Movie Error:', error);
+        res.status(500).json({ message: 'Error submitting rating.' });
+    }
+};
+
+// @desc    Get current user's rating for a movie
+// @route   GET /api/movies/:id/my-rating
+// @access  Private
+export const getMyRating = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const movieId = req.params.id;
+
+        const ratingDoc = await Rating.findOne({ user: userId, movie: movieId });
+        res.json({ userRating: ratingDoc ? ratingDoc.rating : null });
+    } catch (error) {
+        console.error('Get My Rating Error:', error);
+        res.status(500).json({ message: 'Error fetching rating.' });
     }
 };

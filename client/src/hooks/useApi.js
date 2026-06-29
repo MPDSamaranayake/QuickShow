@@ -13,10 +13,11 @@ let tokenCache = { token: null, expiresAt: 0 };
 
 const ADMIN_TOKEN_KEY = 'qs_admin_token';
 
-const buildMovieDetails = (movie) => ({
+const buildMovieDetails = (movie, dateTime) => ({
     _id: movie._id,
     movie,
-    dateTime: dummyDateTimeData,
+    // Use real dateTime from API; only fall back to dummy when truly absent
+    dateTime: (dateTime && Object.keys(dateTime).length > 0) ? dateTime : dummyDateTimeData,
 });
 
 const buildShowDetails = (show) => ({
@@ -43,10 +44,19 @@ const getDummyResponse = (endpoint, options = {}) => {
         return cloneData(dummyShowsData);
     }
 
+    if (method === 'GET' && endpoint.match(/^\/api\/movies\/[^/]+\/my-rating$/)) {
+        return { userRating: null };
+    }
+
+    if (method === 'POST' && endpoint.match(/^\/api\/movies\/[^/]+\/rate$/)) {
+        return { message: 'Rating submitted (offline).', userRating: 3, vote_average: 3.0, vote_count: 1 };
+    }
+
     if (method === 'GET' && endpoint.startsWith('/api/movies/')) {
         const movieId = endpoint.split('/api/movies/')[1]?.split('?')[0];
         const movie = dummyShowsData.find((item) => item._id === movieId || String(item.id) === movieId) || dummyShowsData[0];
-        return cloneData(buildMovieDetails(movie));
+        // Pass dummyDateTimeData as the real dateTime so the date picker is populated in offline mode
+        return cloneData(buildMovieDetails(movie, dummyDateTimeData));
     }
 
     if (method === 'GET' && endpoint === '/api/shows') {
@@ -63,8 +73,39 @@ const getDummyResponse = (endpoint, options = {}) => {
         return cloneData(buildUserBookings());
     }
 
-    if (method === 'POST' && (endpoint === '/api/bookings/lock' || endpoint === '/api/bookings' || endpoint.endsWith('/payment'))) {
-        return { success: true };
+    if (method === 'POST' && endpoint === '/api/bookings/lock') {
+        return { success: true, lockedSeats: [] };
+    }
+
+    if (method === 'POST' && endpoint === '/api/bookings') {
+        const mockId = 'dummy_booking_' + Math.random().toString(36).substr(2, 9);
+        return {
+            _id: mockId,
+            bookingId: 'QS' + Math.floor(100000 + Math.random() * 900000),
+            status: 'pending',
+            isPaid: false,
+            bookedSeats: [],
+            amount: 0,
+        };
+    }
+
+    if (method === 'POST' && endpoint.endsWith('/payment')) {
+        return {
+            message: 'Payment successful.',
+            booking: {
+                _id: endpoint.split('/')[3],
+                bookingId: 'QS' + Math.floor(100000 + Math.random() * 900000),
+                status: 'confirmed',
+                isPaid: true,
+                bookedSeats: [],
+                amount: 0,
+                paymentDetails: {
+                    transactionId: 'TXN-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+                    status: 'success',
+                    paidAt: new Date().toISOString(),
+                }
+            }
+        };
     }
 
     return null;
